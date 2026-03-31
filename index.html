@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Welcome to Saviz's Website</title>
+  <title>Home Expenses Summary</title>
 
-  <!-- Simple clean CSS -->
   <style>
     body {
       margin: 0;
@@ -27,7 +26,7 @@
       max-width: 900px;
       margin: auto;
       background: white;
-      padding: 20px;
+      padding: 25px;
       border-radius: 8px;
       margin-top: 30px;
       box-shadow: 0 0 12px rgba(0,0,0,0.1);
@@ -37,29 +36,74 @@
       color: #D32F2F;
       margin-top: 30px;
     }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: white;
+    }
+
+    table, th, td {
+      border: 1px solid #ccc;
+    }
+
+    th, td {
+      padding: 10px;
+      text-align: left;
+    }
+
+    th {
+      background: #eee;
+    }
   </style>
 </head>
 <body>
 
 <header>
-  Saviz Website
+  Home Expenses Summary (Based on Uploaded Excel File)
 </header>
 
 <div class="container">
-  <h1>Welcome</h1>
+
+  <h1>January Overview</h1>
   <p>
-    This is a simple website created from scratch.
-    No apps, no dashboards, no complications.
+    Below is the summary of your home expenses for <strong>January</strong>, 
+    based on the Excel file you uploaded.
   </p>
 
-  <h2>About Me</h2>
-  <p>Write your intro here…</p>
+  <h2>Income & Totals</h2>
+  <table>
+    <tr><th>Category</th><th>Amount (AUD)</th></tr>
+    <tr><td>Total Income</td><td>10529.70</td></tr>
+    <tr><td>Total Expenses</td><td>9048.82</td></tr>
+    <tr><td><strong>Balance</strong></td><td><strong>1480.88</strong></td></tr>
+  </table>
 
-  <h2>My Projects</h2>
-  <p>List anything you want...</p>
+  <h2>Expense Breakdown (January)</h2>
 
-  <h2>Contact</h2>
-  <p>You can add your contact details here.</p>
+  <table>
+    <tr><th>Expense Category</th><th>Amount (AUD)</th></tr>
+
+    <tr><td>Gym</td><td>107</td></tr>
+    <tr><td>Health Insurance</td><td>284.28</td></tr>
+    <tr><td>Car Loan</td><td>1379.41</td></tr>
+    <tr><td>Netflix</td><td>20.99</td></tr>
+    <tr><td>Internet</td><td>94.99</td></tr>
+    <tr><td>Google Services</td><td>16.99</td></tr>
+    <tr><td>Home Insurance</td><td>196.61</td></tr>
+    <tr><td>Car Insurance</td><td>138</td></tr>
+    <tr><td>Mortgage</td><td>6100</td></tr>
+    <tr><td>Electricity Bill</td><td>283.40</td></tr>
+    <tr><td>Council Rate</td><td>239.15</td></tr>
+    <tr><td>Water Bill</td><td>188</td></tr>
+  </table>
+
+  <p>
+    Monthly data for February–December is blank or zero in your uploaded file, 
+    so only January is shown.
+  </p>
+
 </div>
 
 </body>
