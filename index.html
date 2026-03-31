@@ -81,3 +81,330 @@
     #editPanel {
       display: none;
       position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: #1e1e1e;
+      padding: 25px;
+      border-radius: 10px;
+      width: 350px;
+      border: 2px solid #D32F2F;
+      z-index: 9999;
+    }
+    #editPanel input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      background: #111;
+      color: #fff;
+      border: 1px solid #444;
+      border-radius: 6px;
+    }
+
+    button {
+      background: #D32F2F;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 6px;
+      color: white;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- ✅ TOP NAVIGATION -->
+<nav>
+  <a href="#" onclick="openEditor()">✏️ Edit Month</a>
+  <a href="#" onclick="addMonth()">➕ Add Month</a>
+  <a href="#" onclick="resetData()">🗑 Reset</a>
+  <a href="#" onclick="exportPDF()">📄 PDF</a>
+</nav>
+
+<div class="container">
+
+  <h1>Home Expenses Dashboard</h1>
+
+  <!-- ✅ Month selector -->
+  <label>Select Month:</label>
+  <select id="monthSelector" onchange="switchMonth()"></select>
+
+  <!-- ✅ Summary cards -->
+  <div class="card-box">
+    <div class="card"><h3>Income</h3><p id="incomeBox"></p></div>
+    <div class="card"><h3>Total Expenses</h3><p id="expenseBox"></p></div>
+    <div class="card"><h3>Balance</h3><p id="balanceBox"></p></div>
+    <div class="card"><h3>Highest Expense</h3><p id="highestBox"></p></div>
+  </div>
+
+  <!-- ✅ Charts -->
+  <canvas id="barChart" height="120"></canvas>
+  <canvas id="pieChart" height="120"></canvas>
+  <canvas id="lineChart" height="120"></canvas>
+
+  <!-- ✅ Expense Breakdown -->
+  <h2>Expense Breakdown</h2>
+  <table id="expenseTable"></table>
+
+  <!-- ✅ Yearly Summary -->
+  <h2>Yearly Summary</h2>
+  <table id="yearlySummary"></table>
+
+</div>
+
+<!-- ✅ EDIT MODAL -->
+<div id="editPanel">
+  <h3>Edit Month Data</h3>
+  <div id="editFields"></div>
+  <button onclick="saveMonth()">Save</button>
+  <button onclick="closeEditor()" style="background:#444;">Cancel</button>
+</div>
+
+
+<script>
+/*************************************************
+ ✅ PRELOADED DATA (Your Excel January data)
+**************************************************/
+let data = JSON.parse(localStorage.getItem("expensesData")) || {
+  months: {
+    January: {
+      income: 10529.70,
+      categories: {
+        "Gym": 107,
+        "Health Insurance": 284.28,
+        "Car Loan": 1379.41,
+        "Netflix": 20.99,
+        "Internet": 94.99,
+        "Google": 16.99,
+        "Home Insurance": 196.61,
+        "Car Insurance": 138,
+        "Mortgage": 6100,
+        "Electricity Bill": 283.40,
+        "Council Rate": 239.15,
+        "Water Bill": 188
+      }
+    },
+    February: { income: 0, categories: {} },
+    March: { income: 0, categories: {} }
+  }
+};
+
+let currentMonth = "January";
+
+function ensureCategoriesExist(month) {
+  let template = data.months["January"].categories;
+  if (Object.keys(data.months[month].categories).length === 0) {
+    data.months[month].categories = JSON.parse(JSON.stringify(template));
+  }
+}
+
+/*************************************************
+ ✅ Month dropdown
+**************************************************/
+function loadMonthSelector() {
+  let sel = document.getElementById("monthSelector");
+  sel.innerHTML = "";
+  Object.keys(data.months).forEach(m => {
+    let opt = document.createElement("option");
+    opt.value = m;
+    opt.textContent = m;
+    if (m === currentMonth) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function switchMonth() {
+  currentMonth = document.getElementById("monthSelector").value;
+  ensureCategoriesExist(currentMonth);
+  render();
+}
+
+/*************************************************
+ ✅ Add Month
+**************************************************/
+function addMonth() {
+  const name = prompt("Enter new month name:");
+  if (!name) return;
+  data.months[name] = { income: 0, categories: {} };
+  ensureCategoriesExist(name);
+  currentMonth = name;
+  save();
+  loadMonthSelector();
+  render();
+}
+
+/*************************************************
+ ✅ Edit Modal
+**************************************************/
+function openEditor() {
+  let m = data.months[currentMonth];
+  let html = `<label>Income</label><input id='edit_income' value='${m.income}'>`;
+  for (let c in m.categories) {
+    html += `<label>${c}</label><input id='c_${c}' value='${m.categories[c]}'>`;
+  }
+  document.getElementById("editFields").innerHTML = html;
+  document.getElementById("editPanel").style.display = "block";
+}
+function closeEditor() {
+  document.getElementById("editPanel").style.display = "none";
+}
+function saveMonth() {
+  let m = data.months[currentMonth];
+  m.income = parseFloat(document.getElementById("edit_income").value);
+  for (let c in m.categories) {
+    m.categories[c] = parseFloat(document.getElementById("c_" + c).value);
+  }
+  save();
+  closeEditor();
+  render();
+}
+
+/*************************************************
+ ✅ Save & Reset
+**************************************************/
+function save() {
+  localStorage.setItem("expensesData", JSON.stringify(data));
+}
+function resetData() {
+  if (confirm("Reset ALL data?")) {
+    localStorage.removeItem("expensesData");
+    location.reload();
+  }
+}
+
+/*************************************************
+ ✅ Render Dashboard
+**************************************************/
+let barChart, pieChart, lineChart;
+
+function render() {
+  let m = data.months[currentMonth];
+  ensureCategoriesExist(currentMonth);
+
+  let cats = m.categories;
+  let labels = Object.keys(cats);
+  let values = Object.values(cats);
+
+  let total = values.reduce((a,b)=>a+b,0);
+  let balance = m.income - total;
+  let highest = labels[values.indexOf(Math.max(...values))];
+
+  incomeBox.innerText = "$" + m.income.toFixed(2);
+  expenseBox.innerText = "$" + total.toFixed(2);
+  balanceBox.innerText = "$" + balance.toFixed(2);
+  highestBox.innerText = highest;
+
+  /************ Table **************/
+  let table = "<tr><th>Category</th><th>Amount</th></tr>";
+  labels.forEach((c,i)=>{ table += `<tr><td>${c}</td><td>$${values[i]}</td></tr>`; });
+  expenseTable.innerHTML = table;
+
+  /************ Destroy old charts **************/
+  if (barChart) barChart.destroy();
+  if (pieChart) pieChart.destroy();
+  if (lineChart) lineChart.destroy();
+
+  /************ Bar Chart **************/
+  barChart = new Chart(barChart, {
+    type:"bar",
+    data:{ labels, datasets:[{ label:"Expenses", data:values, backgroundColor:"#D32F2F" }] },
+    options:{ responsive:true }
+  });
+
+  /************ Pie Chart **************/
+  pieChart = new Chart(pieChart, {
+    type:"pie",
+    data:{ labels, datasets:[{ data:values }] },
+    options:{ responsive:true }
+  });
+
+  /************ Line Chart (Year Trend) **************/
+  let months = Object.keys(data.months);
+  let totals = months.map(m => {
+    let cc = data.months[m].categories;
+    return Object.values(cc).reduce((a,b)=>a+b,0);
+  });
+
+  lineChart = new Chart(lineChart, {
+    type:"line",
+    data:{
+      labels: months,
+      datasets:[{
+        label:"Total Expenses",
+        data: totals,
+        borderColor:"#D32F2F",
+        tension:0.3
+      }]
+    }
+  });
+
+  /************ Yearly Summary **************/
+  renderYearlySummary();
+}
+
+/*************************************************
+ ✅ Yearly Summary Table
+**************************************************/
+function renderYearlySummary() {
+  let months = Object.keys(data.months);
+  let html = "<tr><th>Month</th><th>Income</th><th>Expenses</th><th>Balance</th></tr>";
+
+  let ti=0, te=0;
+
+  months.forEach(m => {
+    let mm = data.months[m];
+    let exp = Object.values(mm.categories).reduce((a,b)=>a+b,0);
+    let bal = mm.income - exp;
+    ti += mm.income;
+    te += exp;
+    html += `<tr><td>${m}</td><td>$${mm.income.toFixed(2)}</td><td>$${exp.toFixed(2)}</td><td>$${bal.toFixed(2)}</td></tr>`;
+  });
+
+  html += `<tr style='background:#222;font-weight:bold;'>
+             <td>Total</td><td>$${ti.toFixed(2)}</td><td>$${te.toFixed(2)}</td><td>$${(ti-te).toFixed(2)}</td></tr>`;
+  yearlySummary.innerHTML = html;
+}
+
+/*************************************************
+ ✅ PDF Export
+**************************************************/
+async function exportPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  doc.setFontSize(20);
+  doc.text("Home Expenses Report", 10, 15);
+
+  let y = 30;
+  let m = data.months[currentMonth];
+  let cats = m.categories;
+
+  doc.setFontSize(14);
+  doc.text(`Month: ${currentMonth}`, 10, y); y+=10;
+  doc.text(`Income: $${m.income.toFixed(2)}`, 10, y); y+=10;
+
+  let total = Object.values(cats).reduce((a,b)=>a+b,0);
+  doc.text(`Total Expenses: $${total.toFixed(2)}`, 10, y); y+=10;
+
+  doc.text("Expense Breakdown:", 10, y); y+=10;
+
+  Object.entries(cats).forEach(([k,v])=>{
+    doc.text(`${k}: $${v}`, 10, y);
+    y+=8;
+  });
+
+  doc.save(`${currentMonth}_HomeExpenses.pdf`);
+}
+
+/* ✅ Init Page */
+loadMonthSelector();
+render();
+
+</script>
+
+</body>
+</html>
